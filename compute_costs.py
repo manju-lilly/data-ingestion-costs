@@ -3,7 +3,7 @@ import os
 from aws_cost_calculator import AWSCalculator
 import csv
 
-data_path = "data/delta_10_07.csv"
+data_path = "data/part-00000-e93e77cc-d3ab-4021-b840-43273581ac66-c000_dev (1).csv"
 
 def read_csv(path):
     """[summary]
@@ -58,13 +58,13 @@ def transform_cost(records):
 
     # 1. extractPDF lambda
     extract_pdf_lambda_memory = 2240
-    extract_pdf_lambda_timeout = 900 * 1000
+    extract_pdf_lambda_timeout = 30 * 1000
 
     # 2. textract
     
     # 3. pdf to text lambda
     extract_pdftotxt_lambda_memory = 2240
-    extract_pdftotxt_lambda_timeout = 900 * 1000
+    extract_pdftotxt_lambda_timeout = 30 * 1000
 
     csv_reader = csv.DictReader((line for line in records if not line.isspace(
     ) and not line.replace(",", "").isspace()), delimiter=',')
@@ -83,7 +83,7 @@ def enrich_cost(records):
 
     # enrich invoke statemachie lambda
     enrich_invoke_statemachine_lambda_memory = 2240
-    enrich_invoke_statemachine_lambda_time = 900 * 1000
+    enrich_invoke_statemachine_lambda_time = 30 * 1000
 
     # enrich statemachine
     number_of_transitions = 7
@@ -91,34 +91,47 @@ def enrich_cost(records):
 
     # negation lambda
     enrich_nd_lambda_memory = 2240
-    enrich_nd_lambda_time = 900 * 1000
+    enrich_nd_lambda_time = 30* 1000
 
     # sd lambda
     enrich_sd_lambda_memory = 2240
-    enrich_sd_lambda_time = 900 * 1000
+    enrich_sd_lambda_time = 30 * 1000
     
     # pfRA lambda
     enrich_pfRa_lambda_memory = 2240
-    enrich_pfRa_lambda_time = 900 * 1000
+    enrich_pfRa_lambda_time = 30 * 1000
     
     # jc lambda
     enrich_jc_lambda_memory = 2240
-    enrich_jc_lambda_time = 900 * 1000
+    enrich_jc_lambda_time = 30 * 1000
 
+    print(aws_cost.lambda_pricing(num_records,
+                                  enrich_invoke_statemachine_lambda_memory, enrich_invoke_statemachine_lambda_time))
+
+    
     cost = aws_cost.lambda_pricing(num_records, enrich_invoke_statemachine_lambda_memory, enrich_invoke_statemachine_lambda_time) + aws_cost.statemachine_costs(num_records, number_of_parallel, number_of_transitions) + aws_cost.lambda_pricing(
         num_records, enrich_nd_lambda_memory, enrich_nd_lambda_time) + aws_cost.lambda_pricing(num_records, enrich_sd_lambda_memory, enrich_sd_lambda_time) + aws_cost.lambda_pricing(num_records, enrich_pfRa_lambda_memory, enrich_pfRa_lambda_time) + aws_cost.lambda_pricing(num_records, enrich_jc_lambda_memory, enrich_jc_lambda_time)
 
     return cost
     
+def elastic_search_cost(records):
+    aws_cost = AWSCalculator()
+    num_records = len(records)
+    memory = 128
+    time = 30 * 1000
+    num_records = len(records)
 
+    cost = aws_cost.lambda_pricing(num_records,
+                                   memory, time)
+
+    return cost
     
-
 
 if __name__ == "__main__":
     # read data
     ## read csv file - divide into chunks of 100 - invoke statemachine (each invocation 2 parallel paths)
     records = read_csv(data_path)
-
+    print(len(records))
     # process batch costs
     pb_costs = process_batch_cost(records)
     
@@ -128,10 +141,17 @@ if __name__ == "__main__":
     # enrich costs
     en_costs = enrich_cost(records)
 
-    print(pb_costs, trans_costs, en_costs)
-    print('Total cost', sum([pb_costs, trans_costs, en_costs]))
+    # elastic costs
+    es_cost = elastic_search_cost(records)
+
+    print(pb_costs, trans_costs, en_costs, es_cost)
+    print('Total cost', sum([pb_costs, trans_costs, en_costs, es_cost]))
     
-    
+    """
+    number of records not found:5754
+    total number of records:3280	
+
+    """
 
 
     

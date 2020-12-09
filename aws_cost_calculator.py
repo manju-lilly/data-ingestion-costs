@@ -44,7 +44,7 @@ class AWSCalculator(object):
         total_transitions_per_execution = number_of_parallel * (state_transitions * \
                                                                 number_of_executions)
 
-        executions_to_count = (total_transitions_per_execution - 4, 000) if self.free_tier else total_transitions_per_execution
+        executions_to_count = (total_transitions_per_execution - 4000) if self.free_tier else total_transitions_per_execution
             
         execution_costs = 0
         if executions_to_count > 0:
